@@ -48,6 +48,19 @@ jobs:
           fi
           exit "$code"
 
+  malware-scan:
+    name: Malware signature scan (ClamAV)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Scan with ClamAV
+        run: |
+          docker run --rm -v "$PWD:/scan" \
+            clamav/clamav@sha256:b5b910ce43d595bf8a2fe401e34db56434602b2c755b7c2b07f00c917d04d469 \
+            sh -c "freshclam --quiet && clamscan --recursive --infected --suppress-ok-results /scan"
+
   suspicious-files:
     name: Suspicious file scan
     runs-on: ubuntu-latest
@@ -64,7 +77,7 @@ jobs:
             -not -path './.venv/*' \
             -not -path './venv/*' \
             -not -path './__pycache__/*' \
-            | grep -Ei '\.(scr|pif|hta|vbs|vbe|wsf|wsh|ps1|bat|cmd|com)$|/autorun\.inf$' || true)
+            | grep -Ei '\.(scr|pif|hta|vbs|vbe|wsf|wsh|ps1|bat|cmd|com|exe|dll|so|jar|apk|msi|bin)$|/autorun\.inf$' || true)
           if [ -n "$matches" ]; then
             echo "::error::Suspicious files found that require manual security review:"
             echo "$matches"

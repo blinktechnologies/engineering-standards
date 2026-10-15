@@ -17,11 +17,15 @@ Every Blink-Tech repository calls the reusable workflow defined in
 
 - **Secret scanning** - Gitleaks, scanning full commit history on every push and pull request.
 - **Dependency vulnerability scanning** - OSV-Scanner across all detected lockfiles/manifests.
-- **Suspicious file scan** - flags executable/script extensions (`.scr`, `.ps1`, `.hta`, `.vbs`, ...) that don't belong in ordinary source repositories.
+- **Malware signature scan** - ClamAV, a real signature-based antivirus engine, against the full working tree.
+- **Suspicious file scan** - flags executable/script/binary extensions (`.scr`, `.ps1`, `.hta`, `.vbs`, `.exe`, `.dll`, `.so`, `.jar`, `.apk`, `.msi`, ...) that don't belong in ordinary source repositories.
 - **Suspicious code pattern scan** - flags indicators such as dynamic code execution, encoded PowerShell, and download-and-execute patterns for manual review.
 
-These are review signals, not proof of malware - a flagged finding should be
-triaged by a human before merging.
+Only ClamAV does real malware *detection* (known-signature matching). The
+suspicious-file and suspicious-pattern checks are heuristic review signals,
+not proof of malware - a flagged finding should be triaged by a human
+before merging. None of this replaces endpoint/EDR protection on developer
+machines, which is where most real infections actually start.
 
 ## Enforcement status
 
