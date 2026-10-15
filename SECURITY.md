@@ -23,11 +23,19 @@ Every Blink-Tech repository calls the reusable workflow defined in
 These are review signals, not proof of malware - a flagged finding should be
 triaged by a human before merging.
 
-## Known platform limitation
+## Enforcement status
 
-GitHub's Free organization plan does not support branch protection rules or
-repository rulesets on **private** repositories, so these checks currently
-run and report status but cannot yet technically block a direct push or a
-merge. Enforcement requires either upgrading to GitHub Team (or Enterprise)
-or making a repository public. See the engineering-standards README for the
-current decision status.
+This repository is public, which unlocks real enforcement on GitHub's Free
+plan: branch protection on `main` requires a pull request, CODEOWNERS
+review, all four checks above passing, no force-pushes, no branch/tag
+deletion, and linear history - enforced for admins too. CodeQL (Python) and
+the OpenSSF Scorecard also run here, both of which require a public repo on
+the Free plan.
+
+`blinktech-website` and any other **private** repository in this org does
+not get this enforcement on GitHub's Free plan - branch protection and
+rulesets return "Upgrade to GitHub Pro" there. Those repos still get the
+scans in this workflow (report-only), plus Dependabot alerts and private
+vulnerability reporting, which are free regardless of visibility or plan.
+Real enforcement on private repos requires upgrading the org to GitHub
+Team (or Enterprise).
