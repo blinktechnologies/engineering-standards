@@ -15,6 +15,10 @@ IGNORED_DIRS = {
     "__pycache__",
 }
 
+IGNORED_FILES = {
+    "scan_suspicious_patterns.py",
+}
+
 SOURCE_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx",
     ".mjs", ".cjs", ".sh", ".ps1", ".bat",
@@ -83,6 +87,9 @@ def main() -> int:
             continue
 
         if any(part in IGNORED_DIRS for part in path.parts):
+            continue
+
+        if path.name in IGNORED_FILES:
             continue
 
         if path.suffix.lower() not in SOURCE_EXTENSIONS:
