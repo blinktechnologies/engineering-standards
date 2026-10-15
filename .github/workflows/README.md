@@ -20,11 +20,16 @@ jobs:
 
 All actions referenced are pinned to a commit SHA, not a mutable version tag.
 
+`codeql.yml` and `scorecard.yml` run CodeQL and the OpenSSF Scorecard. Both
+require a public repository on GitHub's Free plan, which this repo now is.
+
 ## Enforcement status
 
-These checks currently run and report pass/fail status on every push and
-pull request, but **cannot yet block a merge or a direct push** - GitHub's
-Free organization plan does not offer branch protection rules or rulesets on
-private repositories. Enforcement becomes available once the org is on
-GitHub Team (or Enterprise), or a given repository is made public. See
-`../../SECURITY.md` for details.
+This repository's `main` branch is protected: PR required, CODEOWNERS
+review required, all four security-scan checks required, no force-pushes,
+no deletions, linear history, enforced for admins too.
+
+Private repositories in this org (e.g. `blinktech-website`) don't get this
+enforcement on GitHub's Free plan - branch protection and rulesets are
+Pro/Team-only there. They still get the scans in this workflow as a
+report-only signal. See `../../SECURITY.md` for details.
