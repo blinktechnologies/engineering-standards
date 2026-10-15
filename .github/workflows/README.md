@@ -1,15 +1,30 @@
 # Blink-Tech Security Workflows
 
-This directory documents the security workflows maintained by Blink-Tech.
+`security-scan.yml` is a reusable workflow (`on: workflow_call`) implementing
+Blink-Tech's standard security checks:
 
-## Planned workflows
+- Secret detection (Gitleaks)
+- Dependency vulnerability auditing (OSV-Scanner)
+- Suspicious-file scanning
+- Suspicious source-pattern scanning
 
-- Malware and suspicious-file scanning
-- Secret detection
-- Dependency vulnerability auditing
-- Static application security testing
-- Pull-request security checks
+`ci.yml` calls it locally for this repository. Other Blink-Tech repositories
+call it remotely:
 
-All workflows must use least-privilege permissions and must not execute untrusted code with access to production secrets.
+```yaml
+jobs:
+  security-scan:
+    uses: blinktechnologies/engineering-standards/.github/workflows/security-scan.yml@main
+    secrets: inherit
+```
 
-Security checks should report actionable findings and prevent protected-branch merges when required checks fail.
+All actions referenced are pinned to a commit SHA, not a mutable version tag.
+
+## Enforcement status
+
+These checks currently run and report pass/fail status on every push and
+pull request, but **cannot yet block a merge or a direct push** - GitHub's
+Free organization plan does not offer branch protection rules or rulesets on
+private repositories. Enforcement becomes available once the org is on
+GitHub Team (or Enterprise), or a given repository is made public. See
+`../../SECURITY.md` for details.

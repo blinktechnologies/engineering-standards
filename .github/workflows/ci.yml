@@ -1,0 +1,16 @@
+name: CI Security Checks
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/security-scan.yml

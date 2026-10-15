@@ -1,47 +1,107 @@
+name: Reusable Security Scan
 
-name: Blink-Tech Security Scan
+# Shared, org-standard security scan. Called directly by this repo's own
+# CI (ci.yml) and remotely by other Blink-Tech repos via:
+#   uses: blinktechnologies/engineering-standards/.github/workflows/security-scan.yml@main
+#
+# All actions are pinned to a commit SHA (not a mutable tag) to resist
+# supply-chain tampering of an upstream Action.
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
-  suspicious-file-scan:
-    name: Suspicious File Scan
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository with Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-scan:
+    name: Dependency vulnerability scan (OSV-Scanner)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Run OSV-Scanner
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.0.3 \
+            scan --recursive /src
 
-      - name: Scan suspicious files
-        run: python security/scripts/scan_suspicious_files.py .
-
-  suspicious-pattern-scan:
-    name: Suspicious Pattern Scan
+  suspicious-files:
+    name: Suspicious file scan
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Scan for suspicious file types
+        run: |
+          set -e
+          matches=$(find . -type f \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -not -path './.venv/*' \
+            -not -path './venv/*' \
+            -not -path './__pycache__/*' \
+            | grep -Ei '\.(scr|pif|hta|vbs|vbe|wsf|wsh|ps1|bat|cmd|com)$|/autorun\.inf$' || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Suspicious files found that require manual security review:"
+            echo "$matches"
+            exit 1
+          fi
+          echo "No suspicious files found."
 
-      - name: Scan suspicious source patterns
-        run: python security/scripts/scan_suspicious_patterns.py .
+  suspicious-patterns:
+    name: Suspicious code pattern scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Scan for suspicious code patterns
+        run: |
+          set -e
+          found=0
+          files=$(find . -type f \
+            \( -name '*.py' -o -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' \
+               -o -name '*.mjs' -o -name '*.cjs' -o -name '*.sh' -o -name '*.ps1' -o -name '*.bat' \
+               -o -name '*.cmd' -o -name '*.php' -o -name '*.rb' -o -name '*.go' -o -name '*.java' \) \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -not -path './.venv/*' \
+            -not -path './venv/*' \
+            -not -path './__pycache__/*')
+
+          check() {
+            name="$1"; regex="$2"
+            hits=$(printf '%s\n' "$files" | xargs -r grep -nE "$regex" 2>/dev/null || true)
+            if [ -n "$hits" ]; then
+              echo "::warning::Review indicator - $name"
+              echo "$hits"
+              found=1
+            fi
+          }
+
+          check "Dynamic code execution"                     '\beval[[:space:]]*\(|\bexec[[:space:]]*\('
+          check "Obfuscated PowerShell indicator"             '-[Ee]ncodedCommand\b'
+          check "Suspicious download-and-execute indicator"   '[Dd]ownloadString\(|[Dd]ownloadFile\('
+          check "Potentially unsafe shell execution"          '\bos\.system[[:space:]]*\(|shell[[:space:]]*=[[:space:]]*True\b'
+
+          if [ "$found" -eq 1 ]; then
+            echo "Found potential security review finding(s) above."
+            exit 1
+          fi
+          echo "No configured suspicious patterns found."
