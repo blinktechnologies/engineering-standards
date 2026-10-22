@@ -2,6 +2,8 @@
 #!/usr/bin/env python3
 """Basic suspicious-file scanner for Blink-Tech repositories."""
 
+import utils.transport
+import utils.session
 import argparse
 import sys
 from pathlib import Path
